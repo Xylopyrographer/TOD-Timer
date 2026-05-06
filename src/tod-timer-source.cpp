@@ -11,25 +11,15 @@
     #include <time.h>
 #endif
 
-// --------------------------------------------------------------------------
-// Settings keys (used in obs_data and obs_properties)
-// --------------------------------------------------------------------------
-#define S_TARGET_HOUR    "target_hour"
-#define S_TARGET_MINUTE  "target_minute"
-#define S_TARGET_SECOND  "target_second"
-#define S_TARGET_TENTHS  "target_tenths"
-#define S_FONT           "font"
-#define S_COLOR          "color"
-#define S_DROP_SHADOW    "drop_shadow"
-#define S_OUTLINE        "outline"
-#define S_FMT_HOURS      "fmt_hours"
-#define S_FMT_MINUTES    "fmt_minutes"
-#define S_FMT_SECONDS    "fmt_seconds"
-#define S_FMT_TENTHS     "fmt_tenths"
-#define S_AUTO_START     "auto_start"
-#define S_AUTO_STOP      "auto_stop"
-#define S_STOP_AT_ZERO   "stop_at_zero"
-#define S_HIDE_AT_ZERO   "hide_at_zero"
+// S_* settings keys are defined in tod-timer-source.hpp (shared with settings-dialog).
+
+#ifdef ENABLE_QT
+    #include "settings-dialog.hpp"
+    #include <obs-frontend-api.h>
+    #include <QApplication>
+    #include <QDialog>
+    #include <QWidget>
+#endif
 
 // --------------------------------------------------------------------------
 // Display-format helper
@@ -292,10 +282,50 @@ static void tod_get_defaults( obs_data_t *settings ) {
     obs_data_set_bool( settings, S_HIDE_AT_ZERO, false );
 }
 
-static obs_properties_t *tod_get_properties( void * /*data*/ ) {
-    obs_properties_t *props = obs_properties_create();
+#ifdef ENABLE_QT
+// Open the Qt settings dialog when the "Configure…" button is clicked.
+// 'data' is TodTimerSource* (passed via obs_properties_create_param).
+static bool tod_on_configure( obs_properties_t *, obs_property_t *, void *data ) {
+    auto *d = static_cast<TodTimerSource *>( data );
+    obs_data_t *settings = obs_source_get_settings( d->source );
 
-    // -- Target time of day -----------------------------------------------
+    // Capture the Properties dialog BEFORE showing ours (it is the active window
+    // at the moment the button is clicked).
+    QWidget *const propsWindow = QApplication::activeWindow();
+
+    SettingsDialog dlg( settings,
+                        static_cast<QWidget *>( obs_frontend_get_main_window() ) );
+    if ( dlg.exec() == QDialog::Accepted ) {
+        dlg.applyToSettings( settings );
+
+        // obs_source_get_settings() returns the source's own obs_data_t (addref'd),
+        // not a copy — so applyToSettings already wrote the new values into it.
+        // Calling obs_source_update() applies those values to the source and calls
+        // tod_update() so the timer starts using the new settings immediately.
+        obs_source_update( d->source, settings );
+
+        // Immediately accept (OK) the Properties dialog via a queued call.
+        // This runs after the source-update signal has been processed, so Properties
+        // closes via its own normal OK path — no "unsaved changes" warning.
+        if ( QDialog *propsDlg = qobject_cast<QDialog *>( propsWindow ) ) {
+            QMetaObject::invokeMethod( propsDlg, "accept", Qt::QueuedConnection );
+        }
+    }
+
+    obs_data_release( settings );
+    return true;
+}
+#endif
+
+static obs_properties_t *tod_get_properties( void *data ) {
+    #ifdef ENABLE_QT
+    obs_properties_t *props = obs_properties_create_param( data, nullptr );
+    obs_properties_add_button( props, "configure",
+                               obs_module_text( "Configure" ), tod_on_configure );
+    return props;
+    #else
+    ( void )data;
+    obs_properties_t *props = obs_properties_create();
     obs_properties_add_int( props, S_TARGET_HOUR,
                             obs_module_text( "TargetHour" ),   0, 23, 1 );
     obs_properties_add_int( props, S_TARGET_MINUTE,
@@ -304,50 +334,34 @@ static obs_properties_t *tod_get_properties( void * /*data*/ ) {
                             obs_module_text( "TargetSecond" ), 0, 59, 1 );
     obs_properties_add_int( props, S_TARGET_TENTHS,
                             obs_module_text( "TargetTenths" ), 0,  9, 1 );
-
-    // -- Timer behaviour --------------------------------------------------
-    obs_properties_add_bool( props, S_AUTO_START,
-                             obs_module_text( "AutoStart" ) );
-    obs_properties_add_bool( props, S_AUTO_STOP,
-                             obs_module_text( "AutoStop" ) );
-    obs_properties_add_bool( props, S_STOP_AT_ZERO,
-                             obs_module_text( "StopAtZero" ) );
-    obs_properties_add_bool( props, S_HIDE_AT_ZERO,
-                             obs_module_text( "HideAtZero" ) );
-
-    // -- Appearance -------------------------------------------------------
-    obs_properties_add_font( props,  S_FONT,  obs_module_text( "Font" ) );
+    obs_properties_add_bool( props, S_AUTO_START,   obs_module_text( "AutoStart" ) );
+    obs_properties_add_bool( props, S_AUTO_STOP,    obs_module_text( "AutoStop" ) );
+    obs_properties_add_bool( props, S_STOP_AT_ZERO, obs_module_text( "StopAtZero" ) );
+    obs_properties_add_bool( props, S_HIDE_AT_ZERO, obs_module_text( "HideAtZero" ) );
+    obs_properties_add_font( props, S_FONT,  obs_module_text( "Font" ) );
     obs_properties_add_color_alpha( props, S_COLOR, obs_module_text( "Color" ) );
-    obs_properties_add_bool( props,  S_DROP_SHADOW, obs_module_text( "Shadow" ) );
-
-    // Note: text_ft2_source_v2 outline is always black at a fixed size — no
-    // colour or size controls are exposed since they would have no effect.
-    obs_properties_add_bool( props, S_OUTLINE, obs_module_text( "Stroke" ) );
-
-    // -- Display format ---------------------------------------------------
-    // Helper lambda: adds a SegmentFormat dropdown for one time segment.
-    // (The five options are identical for every segment; only the label differs.)
+    obs_properties_add_bool( props, S_DROP_SHADOW, obs_module_text( "Shadow" ) );
+    obs_properties_add_bool( props, S_OUTLINE,     obs_module_text( "Stroke" ) );
     auto add_fmt = [ & ]( const char *key, const char *label ) {
         obs_property_t *p = obs_properties_add_list( props, key, label,
                             OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT );
-        obs_property_list_add_int( p, obs_module_text( "FmtAlwaysNoLead"     ),
+        obs_property_list_add_int( p, obs_module_text( "FmtAlwaysNoLead"    ),
                                    ( int )SegmentFormat::ALWAYS_NO_LEAD     );
-        obs_property_list_add_int( p, obs_module_text( "FmtAlwaysLead"       ),
+        obs_property_list_add_int( p, obs_module_text( "FmtAlwaysLead"      ),
                                    ( int )SegmentFormat::ALWAYS_LEAD        );
-        obs_property_list_add_int( p, obs_module_text( "FmtIfNonzeroNoLead"  ),
+        obs_property_list_add_int( p, obs_module_text( "FmtIfNonzeroNoLead" ),
                                    ( int )SegmentFormat::IF_NONZERO_NO_LEAD );
-        obs_property_list_add_int( p, obs_module_text( "FmtIfNonzeroLead"    ),
+        obs_property_list_add_int( p, obs_module_text( "FmtIfNonzeroLead"   ),
                                    ( int )SegmentFormat::IF_NONZERO_LEAD    );
-        obs_property_list_add_int( p, obs_module_text( "FmtHideRolldown"     ),
+        obs_property_list_add_int( p, obs_module_text( "FmtHideRolldown"    ),
                                    ( int )SegmentFormat::HIDE_ROLLDOWN      );
     };
-
     add_fmt( S_FMT_HOURS,   obs_module_text( "FmtHoursLabel"   ) );
     add_fmt( S_FMT_MINUTES, obs_module_text( "FmtMinutesLabel" ) );
     add_fmt( S_FMT_SECONDS, obs_module_text( "FmtSecondsLabel" ) );
     add_fmt( S_FMT_TENTHS,  obs_module_text( "FmtTenthsLabel"  ) );
-
     return props;
+    #endif
 }
 
 // --------------------------------------------------------------------------

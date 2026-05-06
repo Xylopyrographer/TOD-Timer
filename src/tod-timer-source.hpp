@@ -5,6 +5,26 @@
 #include <string>
 
 // --------------------------------------------------------------------------
+// Settings keys (shared between tod-timer-source.cpp and settings-dialog.cpp)
+// --------------------------------------------------------------------------
+#define S_TARGET_HOUR    "target_hour"
+#define S_TARGET_MINUTE  "target_minute"
+#define S_TARGET_SECOND  "target_second"
+#define S_TARGET_TENTHS  "target_tenths"
+#define S_FONT           "font"
+#define S_COLOR          "color"
+#define S_DROP_SHADOW    "drop_shadow"
+#define S_OUTLINE        "outline"
+#define S_FMT_HOURS      "fmt_hours"
+#define S_FMT_MINUTES    "fmt_minutes"
+#define S_FMT_SECONDS    "fmt_seconds"
+#define S_FMT_TENTHS     "fmt_tenths"
+#define S_AUTO_START     "auto_start"
+#define S_AUTO_STOP      "auto_stop"
+#define S_STOP_AT_ZERO   "stop_at_zero"
+#define S_HIDE_AT_ZERO   "hide_at_zero"
+
+// --------------------------------------------------------------------------
 // Platform text source ID
 // OBS ships text_ft2_source_v2 on macOS/Linux, text_gdiplus_v2 on Windows.
 // --------------------------------------------------------------------------

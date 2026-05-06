@@ -21,6 +21,33 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
+if(ENABLE_FRONTEND_API)
+  find_package(obs-frontend-api REQUIRED)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::obs-frontend-api)
+endif()
+
+if(ENABLE_QT)
+  # macOS 15+ SDK dropped AGL.framework (it's an empty stub on the system).
+  # FindWrapOpenGL.cmake (shipped with Qt6) adds AGL unconditionally on macOS,
+  # but has an early-return guard: "if(TARGET WrapOpenGL::WrapOpenGL) return()".
+  # Pre-create the target with just OpenGL so that guard fires and AGL is skipped.
+  if(APPLE AND NOT TARGET WrapOpenGL::WrapOpenGL)
+    add_library(WrapOpenGL::WrapOpenGL INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(WrapOpenGL::WrapOpenGL INTERFACE "-framework OpenGL")
+    set(WrapOpenGL_FOUND ON)
+  endif()
+  find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+  set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
+  target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_QT)
+  target_sources(
+    ${CMAKE_PROJECT_NAME}
+    PRIVATE
+      src/settings-dialog.hpp
+      src/settings-dialog.cpp
+  )
+endif()
+
 target_sources(
   ${CMAKE_PROJECT_NAME}
   PRIVATE
