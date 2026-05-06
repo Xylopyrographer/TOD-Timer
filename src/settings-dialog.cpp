@@ -23,7 +23,7 @@ QComboBox {
     color: white;
     border: none;
     border-radius: 5px;
-    padding: 4px 10px;
+    padding: 4px 4px 4px 10px;
     font-weight: bold;
     font-size: 13px;
     min-width: 52px;
@@ -33,7 +33,8 @@ QComboBox:hover {
 }
 QComboBox::drop-down {
     border: none;
-    width: 0px;
+    width: 18px;
+    background: transparent;
 }
 QComboBox QAbstractItemView {
     background-color: #2d2d2d;
@@ -42,6 +43,7 @@ QComboBox QAbstractItemView {
     border: 1px solid #555;
     outline: none;
     padding: 2px;
+    font-size: 15px;
 }
 )";
 
@@ -170,23 +172,36 @@ void SettingsDialog::buildUi() {
 // Format-picker combo factory
 // --------------------------------------------------------------------------
 
+// Apply combining long stroke overlay (U+0336) after every character in s,
+// producing a fully struck-through string when rendered.
+static QString struck( const QString &s ) {
+    const QChar k( 0x0336 );
+    QString r;
+    r.reserve( s.size() * 2 );
+    for ( QChar c : s ) {
+        r += c;
+        r += k;
+    }
+    return r;
+}
+
 QComboBox *SettingsDialog::createFormatCombo( const QString &abbrev, QWidget *parent ) {
     auto *cb = new QComboBox( parent );
     cb->setStyleSheet( FMT_PILL_STYLE );
 
-    // The combining long stroke overlay (U+0336) placed after a character
-    // renders as a strikethrough, indicating the segment may be suppressed.
-    // Each item stores its SegmentFormat int value as QVariant item data
-    // so populate/apply can use findData/currentData instead of raw indices.
-    const QChar strike( 0x0336 );
-    const QString sk = abbrev + strike;           // e.g. "h̶"  (struck-through)
-    const QString skk = abbrev + strike + abbrev + strike; // e.g. "h̶h̶"
+    // Conditional items use ─X─ / ─XX─ with every character struck-through
+    // (U+0336), so the strikethrough extends continuously across the dashes
+    // and the letter(s), making it clearly readable.
+    // Each item stores its SegmentFormat int value as QVariant item data.
+    const QChar dash( 0x2500 );                   // ─  BOX DRAWINGS LIGHT HORIZONTAL
+    const QString sk  = struck( dash + abbrev + dash );       // e.g. ─̶h̶─̶
+    const QString skk = struck( dash + abbrev + abbrev + dash ); // e.g. ─̶h̶h̶─̶
 
-    cb->addItem( abbrev,  QVariant( 0 ) ); // ALWAYS_NO_LEAD  — h / m / s
-    cb->addItem( abbrev + abbrev, QVariant( 1 ) ); // ALWAYS_LEAD — hh / mm / ss
-    cb->addItem( sk,      QVariant( 2 ) ); // IF_NONZERO_NO_LEAD
-    cb->addItem( skk,     QVariant( 3 ) ); // IF_NONZERO_LEAD
-    cb->addItem( "--",    QVariant( 4 ) ); // HIDE_ROLLDOWN
+    cb->addItem( abbrev,          QVariant( 0 ) ); // ALWAYS_NO_LEAD  — h / m / s
+    cb->addItem( abbrev + abbrev, QVariant( 1 ) ); // ALWAYS_LEAD     — hh / mm / ss
+    cb->addItem( sk,              QVariant( 2 ) ); // IF_NONZERO_NO_LEAD
+    cb->addItem( skk,             QVariant( 3 ) ); // IF_NONZERO_LEAD
+    cb->addItem( "--",            QVariant( 4 ) ); // HIDE_ROLLDOWN
     return cb;
 }
 
@@ -194,12 +209,9 @@ QComboBox *SettingsDialog::createTenthsFormatCombo( QWidget *parent ) {
     auto *cb = new QComboBox( parent );
     cb->setStyleSheet( FMT_PILL_STYLE );
 
-    // Tenths is always a single digit (0–9): leading-zero options are
-    // meaningless, and there is no sub-tenths unit to roll down into.
-    const QChar strike( 0x0336 );
-    cb->addItem( "t",              QVariant( 0 ) ); // ALWAYS_NO_LEAD
-    cb->addItem( QString( "t" ) + strike, QVariant( 2 ) ); // IF_NONZERO_NO_LEAD
-    cb->addItem( "--",             QVariant( 4 ) ); // HIDE_ROLLDOWN
+    // Tenths is always a single digit (0–9): only "always show" or "hide".
+    cb->addItem( "t",  QVariant( 0 ) ); // ALWAYS_NO_LEAD
+    cb->addItem( "--", QVariant( 4 ) ); // HIDE_ROLLDOWN
     return cb;
 }
 
