@@ -17,7 +17,6 @@
     #include "settings-dialog.hpp"
     #include <obs-frontend-api.h>
     #include <QApplication>
-    #include <QDialog>
     #include <QWidget>
 #endif
 
@@ -254,32 +253,32 @@ static void tod_update( void *data, obs_data_t *settings ) {
 static void tod_get_defaults( obs_data_t *settings ) {
     // Default font: Arial 72pt, plain
     obs_data_t *font = obs_data_create();
-    obs_data_set_string( font, "face",  "Arial" );
-    obs_data_set_string( font, "style", "" );
-    obs_data_set_int( font,    "size",  72 );
-    obs_data_set_int( font,    "flags", 0 );
-    obs_data_set_obj( settings, S_FONT, font );
+    obs_data_set_default_string( font, "face",  "Arial" );
+    obs_data_set_default_string( font, "style", "" );
+    obs_data_set_default_int( font,    "size",  72 );
+    obs_data_set_default_int( font,    "flags", 0 );
+    obs_data_set_default_obj( settings, S_FONT, font );
     obs_data_release( font );
 
-    obs_data_set_int( settings,  S_COLOR,         0xFFFFFFFF ); // white, full alpha
-    obs_data_set_bool( settings, S_DROP_SHADOW,   false );
-    obs_data_set_bool( settings, S_OUTLINE, false );
+    obs_data_set_default_int( settings,  S_COLOR,       0xFFFFFFFF ); // white, full alpha
+    obs_data_set_default_bool( settings, S_DROP_SHADOW, false );
+    obs_data_set_default_bool( settings, S_OUTLINE,     false );
 
-    obs_data_set_int( settings, S_TARGET_HOUR,   12 );
-    obs_data_set_int( settings, S_TARGET_MINUTE,  0 );
-    obs_data_set_int( settings, S_TARGET_SECOND,  0 );
-    obs_data_set_int( settings, S_TARGET_TENTHS,  0 );
+    obs_data_set_default_int( settings, S_TARGET_HOUR,   12 );
+    obs_data_set_default_int( settings, S_TARGET_MINUTE,  0 );
+    obs_data_set_default_int( settings, S_TARGET_SECOND,  0 );
+    obs_data_set_default_int( settings, S_TARGET_TENTHS,  0 );
 
     // Default format: hh:mm:ss.t
-    obs_data_set_int( settings, S_FMT_HOURS,   ( int )SegmentFormat::ALWAYS_LEAD );
-    obs_data_set_int( settings, S_FMT_MINUTES, ( int )SegmentFormat::ALWAYS_LEAD );
-    obs_data_set_int( settings, S_FMT_SECONDS, ( int )SegmentFormat::ALWAYS_LEAD );
-    obs_data_set_int( settings, S_FMT_TENTHS,  ( int )SegmentFormat::ALWAYS_NO_LEAD );
+    obs_data_set_default_int( settings, S_FMT_HOURS,   ( int )SegmentFormat::ALWAYS_LEAD );
+    obs_data_set_default_int( settings, S_FMT_MINUTES, ( int )SegmentFormat::ALWAYS_LEAD );
+    obs_data_set_default_int( settings, S_FMT_SECONDS, ( int )SegmentFormat::ALWAYS_LEAD );
+    obs_data_set_default_int( settings, S_FMT_TENTHS,  ( int )SegmentFormat::ALWAYS_NO_LEAD );
 
-    obs_data_set_bool( settings, S_AUTO_START,   true  );
-    obs_data_set_bool( settings, S_AUTO_STOP,    true  );
-    obs_data_set_bool( settings, S_STOP_AT_ZERO, true  );
-    obs_data_set_bool( settings, S_HIDE_AT_ZERO, false );
+    obs_data_set_default_bool( settings, S_AUTO_START,   true  );
+    obs_data_set_default_bool( settings, S_AUTO_STOP,    true  );
+    obs_data_set_default_bool( settings, S_STOP_AT_ZERO, true  );
+    obs_data_set_default_bool( settings, S_HIDE_AT_ZERO, false );
 }
 
 #ifdef ENABLE_QT
@@ -289,31 +288,30 @@ static bool tod_on_configure( obs_properties_t *, obs_property_t *, void *data )
     auto *d = static_cast<TodTimerSource *>( data );
     obs_data_t *settings = obs_source_get_settings( d->source );
 
-    // Capture the Properties dialog BEFORE showing ours (it is the active window
-    // at the moment the button is clicked).
-    QWidget *const propsWindow = QApplication::activeWindow();
-
     SettingsDialog dlg( settings,
                         static_cast<QWidget *>( obs_frontend_get_main_window() ) );
     if ( dlg.exec() == QDialog::Accepted ) {
         dlg.applyToSettings( settings );
 
-        // obs_source_get_settings() returns the source's own obs_data_t (addref'd),
-        // not a copy — so applyToSettings already wrote the new values into it.
-        // Calling obs_source_update() applies those values to the source and calls
-        // tod_update() so the timer starts using the new settings immediately.
+        // Apply changes to the source immediately (timer starts using new values).
         obs_source_update( d->source, settings );
 
-        // Immediately accept (OK) the Properties dialog via a queued call.
-        // This runs after the source-update signal has been processed, so Properties
-        // closes via its own normal OK path — no "unsaved changes" warning.
-        if ( QDialog *propsDlg = qobject_cast<QDialog *>( propsWindow ) ) {
-            QMetaObject::invokeMethod( propsDlg, "accept", Qt::QueuedConnection );
+        // Persist the updated settings to the scene collection JSON right now.
+        obs_frontend_save();
+
+        // Close the OBS Properties panel cleanly so quitting OBS doesn't trigger
+        // its "unsaved changes" prompt.  OBSBasicProperties does not override
+        // accept(), so QDialog::accept() hides it without the closeEvent revert.
+        for ( QWidget *w : QApplication::topLevelWidgets() ) {
+            if ( strcmp( w->metaObject()->className(), "OBSBasicProperties" ) == 0 ) {
+                QMetaObject::invokeMethod( w, "accept", Qt::QueuedConnection );
+                break;
+            }
         }
     }
 
     obs_data_release( settings );
-    return true;
+    return false;
 }
 #endif
 

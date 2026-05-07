@@ -23,6 +23,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE( PLUGIN_NAME, "en-US" )
 
+MODULE_EXPORT const char *obs_module_name( void ) {
+    return "TOD Timer";
+}
+
 MODULE_EXPORT const char *obs_module_description( void ) {
     return "Countdown timer source that counts down to a configurable time of day";
 }
