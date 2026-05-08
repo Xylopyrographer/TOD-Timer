@@ -402,15 +402,15 @@ static void tod_video_tick( void *data, float /*seconds*/ ) {
     else {
         // Running: compute remaining time.
         struct timespec ts;
-#ifdef _WIN32
+        #ifdef _WIN32
         timespec_get( &ts, TIME_UTC );
         struct tm lt;
         localtime_s( &lt, &ts.tv_sec );
-#else
+        #else
         clock_gettime( CLOCK_REALTIME, &ts );
         struct tm lt;
         localtime_r( &ts.tv_sec, &lt );
-#endif
+        #endif
 
         // Target time expressed as milliseconds since midnight.
         const long long target_ms =
