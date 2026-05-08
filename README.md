@@ -1,59 +1,98 @@
-# OBS Plugin Template
+# TOD Timer — OBS Studio Plugin
 
-## Introduction
+A countdown timer source for OBS Studio that counts down to a configurable
+**time of day** (wall-clock target). When the target time is reached the
+timer stops, hides, or simply holds at zero — your choice.
 
-The plugin template is meant to be used as a starting point for OBS Studio plugin development. It includes:
+---
 
-* Boilerplate plugin source code
-* A CMake project file
-* GitHub Actions workflows and repository actions
+## Installation
 
-## Supported Build Environments
+1. Download the latest release for your platform from the
+   [Releases](../../releases) page.
+2. Copy the plugin into your OBS plugins folder:
+   - **macOS:** `~/Library/Application Support/obs-studio/plugins/`
+   - **Windows:** `%APPDATA%\obs-studio\plugins\`
+   - **Linux:** `~/.config/obs-studio/plugins/`
+3. Restart OBS Studio.
 
-| Platform  | Tool   |
-|-----------|--------|
-| Windows   | Visual Studio 17 2022 |
-| macOS     | XCode 16.0 |
-| Windows, macOS  | CMake 3.30.5 |
-| Ubuntu 24.04 | CMake 3.28.3 |
-| Ubuntu 24.04 | `ninja-build` |
-| Ubuntu 24.04 | `pkg-config`
-| Ubuntu 24.04 | `build-essential` |
+---
 
-## Quick Start
+## Adding the Source
 
-An absolute bare-bones [Quick Start Guide](https://github.com/obsproject/obs-plugintemplate/wiki/Quick-Start-Guide) is available in the wiki.
+1. In the **Sources** panel click **+** and choose **TOD Countdown Timer**.
+2. Give it a name and click **OK**.
+3. In the Properties panel click **Configure…** to open the settings dialog.
 
-## Documentation
+---
 
-All documentation can be found in the [Plugin Template Wiki](https://github.com/obsproject/obs-plugintemplate/wiki).
+## Settings
 
-Suggested reading to get up and running:
+### Target Time
 
-* [Getting started](https://github.com/obsproject/obs-plugintemplate/wiki/Getting-Started)
-* [Build system requirements](https://github.com/obsproject/obs-plugintemplate/wiki/Build-System-Requirements)
-* [Build system options](https://github.com/obsproject/obs-plugintemplate/wiki/CMake-Build-System-Options)
+Enter the time of day to count down to in `h:mm:ss.t` format.
+Partial input is accepted — `1:30` means 01:30:00.0.
+Select **AM** or **PM** from the picker to the right.
 
-## GitHub Actions & CI
+> If the target time is earlier than the current time, the timer
+> automatically wraps to the **next occurrence** of that time (i.e. it
+> counts down to tomorrow's occurrence).
 
-Default GitHub Actions workflows are available for the following repository actions:
+---
 
-* `push`: Run for commits or tags pushed to `master` or `main` branches.
-* `pr-pull`: Run when a Pull Request has been pushed or synchronized.
-* `dispatch`: Run when triggered by the workflow dispatch in GitHub's user interface.
-* `build-project`: Builds the actual project and is triggered by other workflows.
-* `check-format`: Checks CMake and plugin source code formatting and is triggered by other workflows.
+### Display Format
 
-The workflows make use of GitHub repository actions (contained in `.github/actions`) and build scripts (contained in `.github/scripts`) which are not needed for local development, but might need to be adjusted if additional/different steps are required to build the plugin.
+Controls how each time unit is displayed. Four blue pill dropdowns
+represent **hours : minutes : seconds . tenths**.
 
-### Retrieving build artifacts
+Each unit (except tenths) has five options:
 
-Successful builds on GitHub Actions will produce build artifacts that can be downloaded for testing. These artifacts are commonly simple archives and will not contain package installers or installation programs.
+| Option | Example | Description |
+|--------|---------|-------------|
+| `h` / `m` / `s` | `7:05:03` | Always shown, no leading zero |
+| `hh` / `mm` / `ss` | `07:05:03` | Always shown, with leading zero |
+| `─h─` *(strikethrough)* | `05:03` | Show only when value > 0, no leading zero |
+| `─hh─` *(strikethrough)* | `05:03` | Show only when value > 0, with leading zero |
+| `--` | — | Hide; roll the value into the next lower unit |
 
-### Building a Release
+The **tenths** dropdown has two options: `t` (always shown) or `--` (hidden).
 
-To create a release, an appropriately named tag needs to be pushed to the `main`/`master` branch using semantic versioning (e.g., `12.3.4`, `23.4.5-beta2`). A draft release will be created on the associated repository with generated installer packages or installation programs attached as release artifacts.
+**Roll-down example:** setting hours to `--` causes hours to roll into
+minutes, so a 90-minute countdown displays as `90:00` rather than `1:30:00`.
 
-## Signing and Notarizing on macOS
+**Leading-zero propagation:** once any higher-order non-zero unit has been
+shown, all lower-order units always display with a leading zero — so
+`57:02` never collapses to `57:2`.
 
-Basic concepts of codesigning and notarization on macOS are explained in the correspodning [Wiki article](https://github.com/obsproject/obs-plugintemplate/wiki/Codesigning-On-macOS) which has a specific section for the [GitHub Actions setup](https://github.com/obsproject/obs-plugintemplate/wiki/Codesigning-On-macOS#setting-up-code-signing-for-github-actions).
+---
+
+### Appearance
+
+| Control | Description |
+|---------|-------------|
+| **Font** | Font family, style (Regular, Bold, Heavy, Semibold, etc.), and point size |
+| **Color** | Text colour (includes opacity/alpha) |
+| **Shadow** | Drop shadow |
+| **Stroke** | Outline stroke |
+
+---
+
+### Behaviour
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| Start when source becomes active | ✅ | Timer starts automatically when the scene containing this source goes live |
+| Stop when source is not active | ✅ | Timer pauses when the scene is not active |
+| Stop when countdown reaches zero | ✅ | Freeze the display at `00:00:00.0` when the target time is reached |
+| Hide when countdown reaches zero | ☐ | Clear the text entirely so the source renders at 0×0 when the target time is reached |
+
+---
+
+## Supported Platforms
+
+| Platform | OBS Version |
+|----------|-------------|
+| macOS 13+ | OBS 31.x |
+| Windows 10/11 | OBS 31.x |
+| Ubuntu 24.04 | OBS 31.x |
+
