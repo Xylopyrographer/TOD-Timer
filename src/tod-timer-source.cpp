@@ -1,6 +1,7 @@
 #include "tod-timer-source.hpp"
 
 #include <obs-module.h>
+#include <plugin-support.h>
 #include <cstdio>
 #include <ctime>
 #include <string>
@@ -314,14 +315,21 @@ static bool tod_on_configure( obs_properties_t *, obs_property_t *, void *data )
 #endif
 
 static obs_properties_t *tod_get_properties( void *data ) {
+    // Build version string: "TOD Timer  v1.0.0 (build 42)"
+    static char s_ver_buf[ 64 ];
+    snprintf( s_ver_buf, sizeof( s_ver_buf ), "v%s (build %s)",
+              PLUGIN_VERSION, PLUGIN_BUILD_NUMBER );
+
     #ifdef ENABLE_QT
     obs_properties_t *props = obs_properties_create_param( data, nullptr );
+    obs_properties_add_text( props, "version", s_ver_buf, OBS_TEXT_INFO );
     obs_properties_add_button( props, "configure",
                                obs_module_text( "Configure" ), tod_on_configure );
     return props;
     #else
     ( void )data;
     obs_properties_t *props = obs_properties_create();
+    obs_properties_add_text( props, "version", s_ver_buf, OBS_TEXT_INFO );
     obs_properties_add_int( props, S_TARGET_HOUR,
                             obs_module_text( "TargetHour" ),   0, 23, 1 );
     obs_properties_add_int( props, S_TARGET_MINUTE,
