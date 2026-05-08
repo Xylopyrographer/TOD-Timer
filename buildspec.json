@@ -33,13 +33,13 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "com.example.tod-timer"
+            "bundleId": "io.github.xylopyrographer.tod-timer"
         }
     },
     "name": "tod-timer",
     "displayName": "TOD Countdown Timer",
     "version": "1.0.0",
-    "author": "robl",
-    "website": "https://example.com",
-    "email": "me@example.com"
+    "author": "Xylopyrographer",
+    "website": "https://github.com/Xylopyrographer/TOD-Timer",
+    "email": "noreply@github.com"
 }
