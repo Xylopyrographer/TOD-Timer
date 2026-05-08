@@ -21,22 +21,26 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include "tod-timer-source.hpp"
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE( PLUGIN_NAME, "en-US" )
+OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-MODULE_EXPORT const char *obs_module_name( void ) {
-    return "TOD Timer";
+MODULE_EXPORT const char *obs_module_name(void)
+{
+	return "TOD Timer";
 }
 
-MODULE_EXPORT const char *obs_module_description( void ) {
-    return "Countdown timer source that counts down to a configurable time of day";
+MODULE_EXPORT const char *obs_module_description(void)
+{
+	return "Countdown timer source that counts down to a configurable time of day";
 }
 
-bool obs_module_load( void ) {
-    register_tod_timer_source();
-    obs_log( LOG_INFO, "TOD Timer plugin loaded (version %s)", PLUGIN_VERSION );
-    return true;
+bool obs_module_load(void)
+{
+	register_tod_timer_source();
+	obs_log(LOG_INFO, "TOD Timer plugin loaded (version %s)", PLUGIN_VERSION);
+	return true;
 }
 
-void obs_module_unload( void ) {
-    obs_log( LOG_INFO, "TOD Timer plugin unloaded" );
+void obs_module_unload(void)
+{
+	obs_log(LOG_INFO, "TOD Timer plugin unloaded");
 }

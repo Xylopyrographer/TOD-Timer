@@ -13,10 +13,7 @@ include(helpers)
 
 add_library(${CMAKE_PROJECT_NAME} MODULE)
 
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
-  CXX_STANDARD 20
-  CXX_STANDARD_REQUIRED ON
-)
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
 
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
@@ -43,21 +40,10 @@ if(ENABLE_QT)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "-framework CoreText" "-framework CoreFoundation")
   endif()
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_QT)
-  target_sources(
-    ${CMAKE_PROJECT_NAME}
-    PRIVATE
-      src/settings-dialog.hpp
-      src/settings-dialog.cpp
-  )
+  target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/settings-dialog.hpp src/settings-dialog.cpp)
 endif()
 
-target_sources(
-  ${CMAKE_PROJECT_NAME}
-  PRIVATE
-    src/plugin-main.cpp
-    src/tod-timer-source.hpp
-    src/tod-timer-source.cpp
-)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE src/plugin-main.cpp src/tod-timer-source.hpp src/tod-timer-source.cpp)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
 
@@ -68,8 +54,7 @@ if(APPLE)
   add_custom_command(
     TARGET ${CMAKE_PROJECT_NAME}
     POST_BUILD
-    COMMAND codesign --sign - --force --deep
-      "${CMAKE_CURRENT_BINARY_DIR}/rundir/$<CONFIG>/${CMAKE_PROJECT_NAME}.plugin"
+    COMMAND codesign --sign - --force --deep "${CMAKE_CURRENT_BINARY_DIR}/rundir/$<CONFIG>/${CMAKE_PROJECT_NAME}.plugin"
     COMMENT "Ad-hoc signing rundir/${CMAKE_PROJECT_NAME}.plugin"
     VERBATIM
   )
