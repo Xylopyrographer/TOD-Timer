@@ -12,8 +12,10 @@ timer stops, hides, or simply holds at zero — your choice.
 
 The macOS release is a signed `.pkg` installer.
 
-Because the package is not notarized, Gatekeeper will block it on first open.
-To work around this:
+Because the package is not notarized, Gatekeeper will block it. The steps to
+work around this depend on your macOS version.
+
+#### macOS 14 (Sonoma) and earlier
 
 1. Download `tod-timer-<version>-macos-universal.pkg` from the
    [Releases](../../releases) page.
@@ -27,6 +29,22 @@ To work around this:
 
 > **Note:** The right-click → Open method is required only the first time.
 > Double-clicking will be blocked by Gatekeeper.
+
+#### macOS 15 (Sequoia) and later
+
+1. Download `tod-timer-<version>-macos-universal.pkg` from the
+   [Releases](../../releases) page.
+2. Double-click the `.pkg` file. macOS will block it and show a dialog saying
+   it cannot be opened.
+3. Open **System Settings** → **Privacy & Security**.
+4. Scroll down to the **Security** section. You will see a message that
+   `tod-timer…pkg` was blocked.
+5. Click **Open Anyway**, then authenticate with Touch ID or your password.
+6. The installer will launch. Follow the prompts. The plugin is installed to
+   `~/Library/Application Support/obs-studio/plugins/` automatically.
+7. Restart OBS Studio.
+
+> **Note:** The Privacy & Security step is required only the first time.
 
 ---
 
