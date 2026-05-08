@@ -96,3 +96,17 @@ shown, all lower-order units always display with a leading zero — so
 | Windows 10/11 | OBS 31.x |
 | Ubuntu 24.04 | OBS 31.x |
 
+---
+
+## Version History
+
+### 1.0.0 — 2026-05-08
+Initial release.
+
+- Countdown to a configurable wall-clock time of day
+- Wraps automatically to the next occurrence when the target has already passed
+- Flexible per-unit display format (always / if non-zero / hide+roll-down) with leading-zero propagation
+- Font, colour, shadow, and stroke appearance controls
+- Auto-start / auto-stop with scene activation; stop-at-zero and hide-at-zero options
+- macOS, Windows, and Linux support
+
