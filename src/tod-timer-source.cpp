@@ -6,10 +6,8 @@
 #include <string>
 
 // clock_gettime / localtime_r are POSIX (macOS 10.12+, Linux).
-// For Windows, swap to timespec_get + localtime_s when adding Win32 support.
-#ifndef _WIN32
-    #include <time.h>
-#endif
+// Windows uses timespec_get (C11, available in MSVC 2019+) + localtime_s.
+#include <time.h>
 
 // S_* settings keys are defined in tod-timer-source.hpp (shared with settings-dialog).
 
@@ -402,11 +400,17 @@ static void tod_video_tick( void *data, float /*seconds*/ ) {
         }
     }
     else {
-        // Running: compute remaining time using POSIX (macOS 12+ / Linux).
+        // Running: compute remaining time.
         struct timespec ts;
+#ifdef _WIN32
+        timespec_get( &ts, TIME_UTC );
+        struct tm lt;
+        localtime_s( &lt, &ts.tv_sec );
+#else
         clock_gettime( CLOCK_REALTIME, &ts );
         struct tm lt;
         localtime_r( &ts.tv_sec, &lt );
+#endif
 
         // Target time expressed as milliseconds since midnight.
         const long long target_ms =

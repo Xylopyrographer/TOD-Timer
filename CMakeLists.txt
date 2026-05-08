@@ -39,7 +39,9 @@ if(ENABLE_QT)
   find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
   set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
-  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "-framework CoreText" "-framework CoreFoundation")
+  if(APPLE)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "-framework CoreText" "-framework CoreFoundation")
+  endif()
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_QT)
   target_sources(
     ${CMAKE_PROJECT_NAME}
