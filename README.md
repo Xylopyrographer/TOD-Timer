@@ -51,7 +51,7 @@ Each unit (except tenths) has five options:
 |--------|---------|-------------|
 | `h` / `m` / `s` | `7:05:03` | Always shown, no leading zero |
 | `hh` / `mm` / `ss` | `07:05:03` | Always shown, with leading zero |
-| `─h─` *(strikethrough)* | `05:03` | Show only when value > 0, no leading zero |
+| `─h─` *(strikethrough)* | `5:03` | Show only when value > 0, no leading zero |
 | `─hh─` *(strikethrough)* | `05:03` | Show only when value > 0, with leading zero |
 | `--` | — | Hide; roll the value into the next lower unit |
 
@@ -80,11 +80,11 @@ shown, all lower-order units always display with a leading zero — so
 ### Behaviour
 
 | Option | Default | Description |
-|--------|---------|-------------|
-| Start when source becomes active | ✅ | Timer starts automatically when the scene containing this source goes live |
-| Stop when source is not active | ✅ | Timer pauses when the scene is not active |
-| Stop when countdown reaches zero | ✅ | Freeze the display at `00:00:00.0` when the target time is reached |
-| Hide when countdown reaches zero | ☐ | Clear the text entirely so the source renders at 0×0 when the target time is reached |
+|--------|:-------:|-------------|
+| Start when source becomes active | ✓ | Timer starts automatically when the scene containing this source goes live |
+| Stop when source is not active | ✓ | Timer pauses when the scene is not active |
+| Stop when countdown reaches zero | ✓ | Freeze the display at `00:00:00.0` when the target time is reached |
+| Hide when countdown reaches zero | - | Clear the text entirely so the source renders at 0×0 when the target time is reached |
 
 ---
 
