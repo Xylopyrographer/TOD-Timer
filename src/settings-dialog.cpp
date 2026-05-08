@@ -187,16 +187,18 @@ void SettingsDialog::buildUi() {
     m_colorButton = new QPushButton( appearGroup );
     m_colorButton->setFixedHeight( 24 );
     connect( m_colorButton, &QPushButton::clicked, this, &SettingsDialog::onChooseColor );
-    appearLayout->addRow( obs_module_text( "Color" ), m_colorButton );
-
-    auto *checkRow = new QHBoxLayout;
     m_shadowCheck  = new QCheckBox( obs_module_text( "Shadow" ),  appearGroup );
     m_outlineCheck = new QCheckBox( obs_module_text( "Stroke" ),  appearGroup );
-    checkRow->addWidget( m_shadowCheck );
-    checkRow->addWidget( m_outlineCheck );
-    checkRow->addStretch();
-    // QFormLayout::addRow with an empty label string for the checkbox row
-    appearLayout->addRow( new QLabel( "", appearGroup ), checkRow );
+    auto *checkCol = new QVBoxLayout;
+    checkCol->setSpacing( 2 );
+    checkCol->addWidget( m_shadowCheck );
+    checkCol->addWidget( m_outlineCheck );
+    auto *colorRow = new QHBoxLayout;
+    colorRow->setSpacing( 8 );
+    colorRow->addWidget( m_colorButton );
+    colorRow->addLayout( checkCol );
+    colorRow->addStretch();
+    appearLayout->addRow( obs_module_text( "Color" ), colorRow );
 
     // ── Behaviour ────────────────────────────────────────────────────────────
     auto *behavGroup  = new QGroupBox( obs_module_text( "BehaviourGroup" ), this );
