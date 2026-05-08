@@ -8,12 +8,54 @@ timer stops, hides, or simply holds at zero — your choice.
 
 ## Installation
 
-1. Download the latest release for your platform from the
+### macOS
+
+The macOS release is a signed `.pkg` installer.
+
+Because the package is not notarized, Gatekeeper will block it on first open.
+To work around this:
+
+1. Download `tod-timer-<version>-macos-universal.pkg` from the
    [Releases](../../releases) page.
-2. Copy the plugin into your OBS plugins folder:
-   - **macOS:** `~/Library/Application Support/obs-studio/plugins/`
-   - **Windows:** `%APPDATA%\obs-studio\plugins\`
-   - **Linux:** `~/.config/obs-studio/plugins/`
+2. In Finder, **right-click** (or Control-click) the `.pkg` file and choose
+   **Open**.
+3. A dialog will warn that the package is from an unidentified developer.
+   Click **Open** to proceed.
+4. Follow the installer prompts. The plugin is installed to
+   `~/Library/Application Support/obs-studio/plugins/` automatically.
+5. Restart OBS Studio.
+
+> **Note:** The right-click → Open method is required only the first time.
+> Double-clicking will be blocked by Gatekeeper.
+
+---
+
+### Windows
+
+The Windows release is a `.zip` archive.
+
+Windows SmartScreen may warn that the file is from an unknown publisher when
+you extract or run files from it.
+
+1. Download `tod-timer-<version>-windows-x64.zip` from the
+   [Releases](../../releases) page.
+2. Right-click the `.zip` and choose **Extract All…**. If SmartScreen shows a
+   blue "Windows protected your PC" dialog, click **More info** then
+   **Run anyway**.
+3. Copy the extracted `tod-timer` folder into:
+   `%APPDATA%\obs-studio\plugins\`
+4. Restart OBS Studio.
+
+---
+
+### Linux
+
+1. Download `tod-timer-<version>-x86_64-linux-gnu.deb` from the
+   [Releases](../../releases) page.
+2. Install it:
+   ```
+   sudo dpkg -i tod-timer-<version>-x86_64-linux-gnu.deb
+   ```
 3. Restart OBS Studio.
 
 ---
