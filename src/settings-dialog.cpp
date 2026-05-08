@@ -10,9 +10,56 @@
 #include <QCheckBox>
 #include <QPushButton>
 #include <QDialogButtonBox>
-#include <QFontDialog>
+#include <QFontComboBox>
+#include <QFontDatabase>
+#include <QSpinBox>
 #include <QColorDialog>
 #include <QString>
+
+#ifdef __APPLE__
+#include <CoreText/CoreText.h>
+#include <CoreFoundation/CoreFoundation.h>
+// Return all style names for a font family via Core Text, which enumerates
+// the full set of faces that macOS Font Book shows (Qt only returns ~20).
+static QStringList coreTextStyles( const QString &family ) {
+    CFStringRef familyCF = CFStringCreateWithCharacters(
+                               kCFAllocatorDefault,
+                               reinterpret_cast<const UniChar *>( family.constData() ),
+                               static_cast<CFIndex>( family.size() ) );
+    CFDictionaryRef attrs = CFDictionaryCreate(
+                                kCFAllocatorDefault,
+                                ( const void ** )&kCTFontFamilyNameAttribute,
+                                ( const void ** )&familyCF,
+                                1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks );
+    CTFontDescriptorRef proto = CTFontDescriptorCreateWithAttributes( attrs );
+    CFArrayRef matches = CTFontDescriptorCreateMatchingFontDescriptors( proto, nullptr );
+    CFRelease( proto );
+    CFRelease( attrs );
+    CFRelease( familyCF );
+
+    QStringList styles;
+    if ( matches ) {
+        const CFIndex n = CFArrayGetCount( matches );
+        for ( CFIndex i = 0; i < n; ++i ) {
+            auto *desc = ( CTFontDescriptorRef )CFArrayGetValueAtIndex( matches, i );
+            auto *style = ( CFStringRef )CTFontDescriptorCopyAttribute( desc, kCTFontStyleNameAttribute );
+            if ( style ) {
+                const CFIndex len = CFStringGetLength( style );
+                QString s( static_cast<int>( len ), Qt::Uninitialized );
+                CFStringGetCharacters( style, CFRangeMake( 0, len ),
+                                       reinterpret_cast<UniChar *>( s.data() ) );
+                CFRelease( style );
+                if ( !s.isEmpty() && !styles.contains( s ) ) {
+                    styles << s;
+                }
+            }
+        }
+        CFRelease( matches );
+    }
+    styles.sort( Qt::CaseInsensitive );
+    return styles;
+}
+#endif
 
 // --------------------------------------------------------------------------
 // Stylesheet for the format-picker "blue pill" QComboBox
@@ -121,9 +168,21 @@ void SettingsDialog::buildUi() {
     auto *appearLayout = new QFormLayout( appearGroup );
     appearLayout->setRowWrapPolicy( QFormLayout::DontWrapRows );
 
-    m_fontButton = new QPushButton( appearGroup );
-    connect( m_fontButton, &QPushButton::clicked, this, &SettingsDialog::onChooseFont );
-    appearLayout->addRow( obs_module_text( "Font" ), m_fontButton );
+    m_fontFamily = new QFontComboBox( appearGroup );
+    m_fontStyle  = new QComboBox( appearGroup );
+    m_fontStyle->setMinimumWidth( 100 );
+    m_fontStyle->setMaxVisibleItems( 40 );
+    connect( m_fontFamily, &QFontComboBox::currentFontChanged,
+             this, &SettingsDialog::onFontFamilyChanged );
+    m_fontSize = new QSpinBox( appearGroup );
+    m_fontSize->setRange( 6, 288 );
+    m_fontSize->setSuffix( " pt" );
+    auto *fontRow = new QHBoxLayout;
+    fontRow->setSpacing( 6 );
+    fontRow->addWidget( m_fontFamily, 1 );
+    fontRow->addWidget( m_fontStyle );
+    fontRow->addWidget( m_fontSize );
+    appearLayout->addRow( obs_module_text( "Font" ), fontRow );
 
     m_colorButton = new QPushButton( appearGroup );
     m_colorButton->setFixedHeight( 24 );
@@ -268,17 +327,17 @@ void SettingsDialog::populateFromSettings( obs_data_t *settings ) {
     // ── Font ─────────────────────────────────────────────────────────────────
     obs_data_t *fontObj = obs_data_get_obj( settings, S_FONT );
     if ( fontObj ) {
-        m_font = QFont(
-                     QString::fromUtf8( obs_data_get_string( fontObj, "face" ) ),
-                     ( int )obs_data_get_int( fontObj, "size" ) );
-        const int flags = ( int )obs_data_get_int( fontObj, "flags" );
-        m_font.setBold( flags & 1 );
-        m_font.setItalic( flags & 2 );
-        m_font.setUnderline( flags & 4 );
-        m_font.setStrikeOut( flags & 8 );
+        const QString face  = QString::fromUtf8( obs_data_get_string( fontObj, "face" ) );
+        const QString style = QString::fromUtf8( obs_data_get_string( fontObj, "style" ) );
+        const int     size  = ( int )obs_data_get_int( fontObj, "size" );
+        m_fontFamily->setCurrentFont( QFont( face ) );
+        updateStyleCombo( face, style );
+        m_fontSize->setValue( size > 0 ? size : 72 );
         obs_data_release( fontObj );
     }
-    updateFontButton();
+    else {
+        updateStyleCombo( m_fontFamily->currentFont().family() );
+    }
 
     // ── Color ────────────────────────────────────────────────────────────────
     // OBS stores color as ABGR: bits 0–7 = R, 8–15 = G, 16–23 = B, 24–31 = A.
@@ -305,13 +364,6 @@ void SettingsDialog::populateFromSettings( obs_data_t *settings ) {
 // Button label helpers
 // --------------------------------------------------------------------------
 
-void SettingsDialog::updateFontButton() {
-    // Show the selected font in the button's own face so the user gets a preview.
-    m_fontButton->setFont( m_font );
-    m_fontButton->setText(
-        QString( "%1,  %2 pt" ).arg( m_font.family() ).arg( m_font.pointSize() ) );
-}
-
 void SettingsDialog::updateColorButton() {
     // Fill the button with the selected color so it acts as a swatch.
     m_colorButton->setStyleSheet(
@@ -327,16 +379,6 @@ void SettingsDialog::updateColorButton() {
 // Font / color slots
 // --------------------------------------------------------------------------
 
-void SettingsDialog::onChooseFont() {
-    bool ok = false;
-    QFont f = QFontDialog::getFont( &ok, m_font, this,
-                                    obs_module_text( "ChooseFont" ) );
-    if ( ok ) {
-        m_font = f;
-        updateFontButton();
-    }
-}
-
 void SettingsDialog::onChooseColor() {
     QColor c = QColorDialog::getColor(
                    m_color, this,
@@ -346,6 +388,27 @@ void SettingsDialog::onChooseColor() {
         m_color = c;
         updateColorButton();
     }
+}
+
+void SettingsDialog::onFontFamilyChanged( const QFont &font ) {
+    updateStyleCombo( font.family() );
+}
+
+void SettingsDialog::updateStyleCombo( const QString &family, const QString &currentStyle ) {
+    const QString restore = currentStyle.isEmpty() ? m_fontStyle->currentText() : currentStyle;
+    m_fontStyle->blockSignals( true );
+    m_fontStyle->clear();
+    #ifdef __APPLE__
+    const QStringList styles = coreTextStyles( family );
+    #else
+    const QStringList styles = QFontDatabase::styles( family );
+    #endif
+    for ( const QString &s : styles ) {
+        m_fontStyle->addItem( s );
+    }
+    const int idx = m_fontStyle->findText( restore );
+    m_fontStyle->setCurrentIndex( idx >= 0 ? idx : 0 );
+    m_fontStyle->blockSignals( false );
 }
 
 // --------------------------------------------------------------------------
@@ -418,21 +481,22 @@ void SettingsDialog::applyToSettings( obs_data_t *settings ) const {
 
     // ── Font ─────────────────────────────────────────────────────────────────
     obs_data_t *fontObj = obs_data_create();
-    obs_data_set_string( fontObj, "face",  m_font.family().toUtf8().constData() );
-    obs_data_set_string( fontObj, "style", m_font.styleName().toUtf8().constData() );
-    obs_data_set_int( fontObj,    "size",  m_font.pointSize() > 0 ? m_font.pointSize() : 72 );
+    const QString family = m_fontFamily->currentFont().family();
+    const QString style  = m_fontStyle->currentText();
+    obs_data_set_string( fontObj, "face",  family.toUtf8().constData() );
+    obs_data_set_string( fontObj, "style", style.toUtf8().constData() );
+    obs_data_set_int( fontObj,    "size",  m_fontSize->value() );
+    // Derive bold/italic flags from the style name; QFontDatabase::bold/italic
+    // may not recognise Core Text-only style names like "Heavy" or "Semibold".
+    const QString styleLower = style.toLower();
     int flags = 0;
-    if ( m_font.bold() ) {
+    if ( styleLower.contains( "bold" ) || styleLower.contains( "heavy" ) ||
+            styleLower.contains( "black" ) || styleLower.contains( "semibold" ) ||
+            styleLower.contains( "demibold" ) || styleLower.contains( "medium" ) ) {
         flags |= 1;
     }
-    if ( m_font.italic() ) {
+    if ( styleLower.contains( "italic" ) || styleLower.contains( "oblique" ) ) {
         flags |= 2;
-    }
-    if ( m_font.underline() ) {
-        flags |= 4;
-    }
-    if ( m_font.strikeOut() ) {
-        flags |= 8;
     }
     obs_data_set_int( fontObj, "flags", flags );
     obs_data_set_obj( settings, S_FONT, fontObj );

@@ -10,6 +10,8 @@ class QLineEdit;
 class QComboBox;
 class QCheckBox;
 class QPushButton;
+class QFontComboBox;
+class QSpinBox;
 
 // --------------------------------------------------------------------------
 // SettingsDialog
@@ -35,8 +37,8 @@ class SettingsDialog : public QDialog {
     void applyToSettings( obs_data_t *settings ) const;
 
   private slots:
-    void onChooseFont();
     void onChooseColor();
+    void onFontFamilyChanged( const QFont &font );
 
   private:
     // ── Target time ──────────────────────────────────────────────────────────
@@ -50,10 +52,12 @@ class SettingsDialog : public QDialog {
     QComboBox   *m_fmtTenths{nullptr};
 
     // ── Appearance ───────────────────────────────────────────────────────────
-    QPushButton *m_fontButton{nullptr};    // shows family + size; opens QFontDialog
-    QPushButton *m_colorButton{nullptr};   // colored swatch; opens QColorDialog
-    QCheckBox   *m_shadowCheck{nullptr};
-    QCheckBox   *m_outlineCheck{nullptr};
+    QFontComboBox *m_fontFamily{nullptr};  // font family picker
+    QComboBox     *m_fontStyle{nullptr};   // style within family (Regular, Bold, Heavy…)
+    QSpinBox      *m_fontSize{nullptr};    // point size
+    QPushButton   *m_colorButton{nullptr}; // colored swatch; opens QColorDialog
+    QCheckBox     *m_shadowCheck{nullptr};
+    QCheckBox     *m_outlineCheck{nullptr};
 
     // ── Behaviour ────────────────────────────────────────────────────────────
     QCheckBox   *m_autoStart{nullptr};
@@ -61,9 +65,8 @@ class SettingsDialog : public QDialog {
     QCheckBox   *m_stopAtZero{nullptr};
     QCheckBox   *m_hideAtZero{nullptr};
 
-    // Internal state for font / color (kept so we can re-open dialogs
+    // Internal state for color (kept so we can re-open dialog
     // pre-seeded with the current selection).
-    QFont  m_font;
     QColor m_color;
 
     // Build the widget tree (called once from constructor).
@@ -81,9 +84,10 @@ class SettingsDialog : public QDialog {
     // are meaningless, and there is no unit below to roll into).
     QComboBox *createTenthsFormatCombo( QWidget *parent );
 
-    // Refresh button labels after a font / color selection.
-    void updateFontButton();
+    // Refresh color swatch button after a color selection.
     void updateColorButton();
+    // Repopulate m_fontStyle from QFontDatabase for the given family.
+    void updateStyleCombo( const QString &family, const QString &currentStyle = {} );
 
     // Parse m_timeEdit text + m_ampm selection → 24-hour components.
     // Handles partial input: "1:30" → 1 h, 30 min, 0 s, 0 t.
